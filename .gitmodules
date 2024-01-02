@@ -1,0 +1,3 @@
+[submodule "mainrepo"]
+	path = mainrepo
+	url = git@github.com:KonstantAnxiety/repo-outer.git
