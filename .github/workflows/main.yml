@@ -12,8 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       mainrepo_prs: ${{ steps.gather_mainrepo_prs.outputs.report }}
-    permissions:
-      actions: 'write'
     steps:
       - name: "Cleanup build folder"
         run: |
@@ -42,16 +40,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          touch /tmp/report/mainrepo_prs.lst
           mainrepo_sha_diff=($(git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} mainrepo | grep Subproject >/dev/null 2>&1 || echo "" | awk '{print $3}'))
           if [ ${#mainrepo_sha_diff[@]} -eq 0 ]; then
             echo "No updates for mainrepo found, exiting..."
-            gh run cancel ${{ github.run_id }}
-            gh run watch ${{ github.run_id }}
+            exit 0
           fi
           mainrepo_sha_base="${mainrepo_sha_diff[0]}"
           mainrepo_sha_head="${mainrepo_sha_diff[1]}"
           cd mainrepo
-          touch /tmp/report/mainrepo_prs.lst
           for sha in $(git log --reverse --format="%h" $mainrepo_sha_base..$mainrepo_sha_head); do
             pull_requests=("$(gh pr list --search $sha --state merged --json number,title,headRefName,updatedAt --template '{{range .}}{{printf "`%s`" .updatedAt}} {{printf "[#REMOVE_ME%v](https://github.com/KonstantAnxiety/repo-inner/pull/REMOVE_ME%v)" .number .number}} {{.title}}{{end}}')")
             echo "$(IFS=$'\n' ; echo "${pull_requests[*]}")" >> /tmp/report/mainrepo_prs.lst
@@ -83,6 +80,10 @@ jobs:
         run: |
           cat ./tmp/report/mainrepo_prs.lst
           mainrepo_prs=$(cat ./tmp/report/mainrepo_prs.lst)
+          if [ -z "mainrepo_prs$" ]
+            echo "The report is empty, exiting..."
+            exit 0
+          fi
           req_body=$(jq -n \
             --arg msg "$mainrepo_prs" \
             '{body: $msg}')
