@@ -32,7 +32,7 @@ jobs:
       - name: "Running mainrepo version check"
         run: git submodule update --remote mainrepo
 
-      - run: mkdir /report
+      - run: mkdir /tmp/report
       - name: "Gather mainrepo PRs"
         id: gather_mainrepo_prs
         if: github.event_name == 'pull_request'
@@ -44,16 +44,16 @@ jobs:
           mainrepo_sha_base="${mainrepo_sha_diff[0]}"
           mainrepo_sha_head="${mainrepo_sha_diff[1]}"
           cd mainrepo
-          touch /report/mainrepo_prs.lst
+          touch /tmp/report/mainrepo_prs.lst
           for sha in $(git log --reverse --format="%h" $mainrepo_sha_base..$mainrepo_sha_head); do
             pull_requests=("$(gh pr list --search $sha --state merged --json number,title,headRefName,updatedAt --template '{{range .}}{{printf "`%s`" .updatedAt}} {{printf "[#REMOVE_ME%v](https://github.com/KonstantAnxiety/repo-inner/pull/REMOVE_ME%v)" .number .number}} {{.title}}{{end}}')")
-            echo "$(IFS=$'\n' ; echo "${pull_requests[*]}")" >> /report/mainrepo_prs.lst
+            echo "$(IFS=$'\n' ; echo "${pull_requests[*]}")" >> /tmp/report/mainrepo_prs.lst
           done
-          cat /report/mainrepo_prs.lst
+          cat /tmp/report/mainrepo_prs.lst
       - uses: actions/upload-artifact@v3
         with:
           name: "mainrepo_updates_report"
-          path: /report/mainrepo_prs.lst
+          path: /tmp/report/mainrepo_prs.lst
           retention-days: 1
 
   report_mainrepo_changes:
@@ -66,7 +66,7 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: "mainrepo_updates_report"
-          path: ./report/
+          path: ./tmp/report/
       - name: "Post mainrepo PRs as a comment"
         shell: bash
 #        if: github.event.pull_request.merged == true
@@ -74,8 +74,8 @@ jobs:
           URL: ${{ github.event.pull_request.comments_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cat ./report/mainrepo_prs.lst
-          mainrepo_prs=$(cat ./report/mainrepo_prs.lst)
+          cat ./tmp/report/mainrepo_prs.lst
+          mainrepo_prs=$(cat ./tmp/report/mainrepo_prs.lst)
           req_body=$(jq -n \
             --arg msg "$mainrepo_prs" \
             '{body: $msg}')
