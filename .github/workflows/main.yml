@@ -80,7 +80,7 @@ jobs:
         run: |
           cat ./tmp/report/mainrepo_prs.lst
           mainrepo_prs=$(cat ./tmp/report/mainrepo_prs.lst)
-          if [ -z "mainrepo_prs$" ]; then
+          if [ -z "$mainrepo_prs" ]; then
             echo "The report is empty, exiting..."
             exit 0
           fi
