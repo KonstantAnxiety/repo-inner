@@ -90,7 +90,41 @@ jobs:
           $mainrepo_prs
           EOF
           )
-          gh pr comment ${{ github.event.pull_request.number }} -b "$message"
+          
+          comment_id=$(gh api graphql -f query='
+            query {
+              repository(owner: "${{ github.repository_owner }}", name: "${{ github.repository }}") {
+                pullRequest(number: ${{ github.event.pull_request.number }}) {
+                  comments(last: 100) {
+                    nodes {
+                      id
+                      author { login }
+                      body
+                    }
+                  }
+                }
+              }
+            }
+          ' --jq 'last(.data.repository.pullRequest.comments.nodes[] | select((.body | startswith("Detected mainrepo changes")) and .author.login == "github-actions")).id')
+          
+          if [ -z "$comment_id" ]; then
+            gh pr comment ${{ github.event.pull_request.number }} -b "$message"
+          else
+            gh api graphql -f query="
+                mutation {
+                    updateIssueComment(input: {
+                        id: \"$comment_id\",
+                        body: \"Detected mainrepo changes: 2\"
+                    }) {
+                        issueComment {
+                            lastEditedAt
+                        }
+                    }
+                }
+            "
+          fi
+
+          
 
 #          req_body=$(jq -n \
 #            --arg msg "$mainrepo_prs" \
