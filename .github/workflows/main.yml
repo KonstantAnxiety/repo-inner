@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       mainrepo_prs: ${{ steps.gather_mainrepo_prs.outputs.report }}
+    permissions:
+      actions: 'write'
     steps:
       - name: "Cleanup build folder"
         run: |
