@@ -93,7 +93,7 @@ jobs:
           
           comment_id=$(gh api graphql -f query='
             query {
-              repository(owner: "${{ github.repository_owner }}", name: "${{ github.repository }}") {
+              repository(owner: "${{ github.repository_owner }}", name: "${{ github.event.repository.name }}") {
                 pullRequest(number: ${{ github.event.pull_request.number }}) {
                   comments(last: 100) {
                     nodes {
