@@ -106,7 +106,7 @@ jobs:
           if [ -z "$comment_id" ]; then
             gh pr comment ${{ github.event.pull_request.number }} -b "$message"
           else
-            message+="$message"$'\n\n'"♻️ This comment has been updated with latest results."
+            message+=$'\n\n'"♻️ This comment has been updated with latest results."
             gh api graphql -f query="
                 mutation {
                     updateIssueComment(input: {
