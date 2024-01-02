@@ -73,7 +73,6 @@ jobs:
           path: ./tmp/report/
       - name: "Post mainrepo PRs as a comment"
         shell: bash
-#        if: github.event.pull_request.merged == true
         env:
           URL: ${{ github.event.pull_request.comments_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -84,12 +83,14 @@ jobs:
             echo "The report is empty, exiting..."
             exit 0
           fi
-          req_body=$(jq -n \
-            --arg msg "$mainrepo_prs" \
-            '{body: $msg}')
-          curl \
-            -X POST \
-            $URL \
-            -H "Content-Type: application/json" \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            --data "$req_body"
+          gh pr comment ${{ github.event.pull_request.number }} -b "Detected mainrepo changes:\n$mainrepo_prs"
+
+#          req_body=$(jq -n \
+#            --arg msg "$mainrepo_prs" \
+#            '{body: Detected mainrepo changes:\n$msg}')
+#          curl \
+#            -X POST \
+#            $URL \
+#            -H "Content-Type: application/json" \
+#            -H "Authorization: token $GITHUB_TOKEN" \
+#            --data "$req_body"
