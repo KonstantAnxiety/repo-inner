@@ -50,7 +50,7 @@ jobs:
           mainrepo_sha_head="${mainrepo_sha_diff[1]}"
           cd mainrepo
           for sha in $(git log --reverse --format="%h" $mainrepo_sha_base..$mainrepo_sha_head); do
-            pull_requests=("$(gh pr list --search $sha --state merged --json number,title,headRefName,updatedAt --template '{{range .}}{{printf "`%s`" .updatedAt}} {{printf "[#REMOVE_ME%v](https://github.com/KonstantAnxiety/repo-inner/pull/REMOVE_ME%v)" .number .number}} {{.title}}{{end}}')")
+            pull_requests=("$(gh pr list --search $sha --state merged --json number,title,headRefName,updatedAt --template '{{range .}}{{printf "`%s`" .updatedAt}} {{printf "[#%v](https://github.com/KonstantAnxiety/repo-inner/pull/%v)" .number .number}} {{.title}}{{end}}')")
             echo "$(IFS=$'\n' ; echo "${pull_requests[*]}")" >> /tmp/report/mainrepo_prs.lst
           done
           cat /tmp/report/mainrepo_prs.lst
