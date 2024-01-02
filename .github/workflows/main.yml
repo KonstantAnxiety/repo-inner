@@ -85,11 +85,7 @@ jobs:
             echo "The report is empty, exiting..."
             exit 0
           fi
-          message=$(cat << EOF
-          Detected mainrepo changes:
-          $mainrepo_prs
-          EOF
-          )
+          message="Detected mainrepo changes:"$'\n'"$mainrepo_prs"
           
           comment_id=$(gh api graphql -f query='
             query {
@@ -110,12 +106,7 @@ jobs:
           if [ -z "$comment_id" ]; then
             gh pr comment ${{ github.event.pull_request.number }} -b "$message"
           else
-            message=$(cat << EOF
-            $message
-            
-            ♻️ This comment has been updated with latest results.
-            EOF
-            )
+            message+="$message"$'\n\n'"♻️ This comment has been updated with latest results."
             gh api graphql -f query="
                 mutation {
                     updateIssueComment(input: {
