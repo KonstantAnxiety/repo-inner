@@ -41,6 +41,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mainrepo_sha_diff=($(git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} mainrepo | grep Subproject | awk '{print $3}'))
+          if [ ${#mainrepo_sha_diff[@]} -eq 0 ]; then
+            echo "No updates for mainrepo found, exiting..."
+            exit 0
+          fi
           mainrepo_sha_base="${mainrepo_sha_diff[0]}"
           mainrepo_sha_head="${mainrepo_sha_diff[1]}"
           cd mainrepo
