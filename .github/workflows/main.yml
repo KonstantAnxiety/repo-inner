@@ -1,0 +1,87 @@
+name: main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+
+jobs:
+  mainrepo_version_check:
+    runs-on: ubuntu-latest
+    outputs:
+      mainrepo_prs: ${{ steps.gather_mainrepo_prs.outputs.report }}
+    steps:
+      - name: "Cleanup build folder"
+        run: |
+          rm -rf ./* || true
+          rm -rf ./.??* || true
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: "Setting up git config"
+        run: |
+          git config --global --add safe.directory .
+          git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
+
+      - name: "Running mainrepo version check"
+        run: git submodule update --remote mainrepo
+
+      - run: mkdir /report
+      - name: "Gather mainrepo PRs"
+        id: gather_mainrepo_prs
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mainrepo_sha_diff=($(git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} mainrepo | grep Subproject | awk '{print $3}'))
+          mainrepo_sha_base="${mainrepo_sha_diff[0]}"
+          mainrepo_sha_head="${mainrepo_sha_diff[1]}"
+          cd mainrepo
+          touch /report/mainrepo_prs.lst
+          for sha in $(git log --reverse --format="%h" $mainrepo_sha_base..$mainrepo_sha_head); do
+            pull_requests=("$(gh pr list --search $sha --state merged --json number,title,headRefName,updatedAt --template '{{range .}}{{printf "`%s`" .updatedAt}} {{printf "[#REMOVE_ME%v](https://github.com/KonstantAnxiety/repo-inner/pull/REMOVE_ME%v)" .number .number}} {{.title}}{{end}}')")
+            echo "$(IFS=$'\n' ; echo "${pull_requests[*]}")" >> /report/mainrepo_prs.lst
+          done
+          cat /report/mainrepo_prs.lst
+      - uses: actions/upload-artifact@v3
+        with:
+          name: "mainrepo_updates_report"
+          path: /report/mainrepo_prs.lst
+          retention-days: 1
+
+  report_mainrepo_changes:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: mainrepo_version_check
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: "mainrepo_updates_report"
+          path: ./report/
+      - name: "Post mainrepo PRs as a comment"
+        shell: bash
+#        if: github.event.pull_request.merged == true
+        env:
+          URL: ${{ github.event.pull_request.comments_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat ./report/mainrepo_prs.lst
+          mainrepo_prs=$(cat ./report/mainrepo_prs.lst)
+          req_body=$(jq -n \
+            --arg msg "$mainrepo_prs" \
+            '{body: $msg}')
+          curl \
+            -X POST \
+            $URL \
+            -H "Content-Type: application/json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            --data "$req_body"
