@@ -85,7 +85,11 @@ jobs:
             echo "The report is empty, exiting..."
             exit 0
           fi
-          message=$"Detected mainrepo changes:\n\r$mainrepo_prs"
+          message=$(cat << EOF
+          Detected mainrepo changes:
+          $mainrepo_prs
+          EOF
+          )
           gh pr comment ${{ github.event.pull_request.number }} -b "$message"
 
 #          req_body=$(jq -n \
