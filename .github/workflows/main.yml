@@ -85,7 +85,7 @@ jobs:
             echo "The report is empty, exiting..."
             exit 0
           fi
-          gh pr comment ${{ github.event.pull_request.number }} -b "Detected mainrepo changes:\n$mainrepo_prs"
+          gh pr comment ${{ github.event.pull_request.number }} -b "Detected mainrepo changes:\\n$mainrepo_prs"
 
 #          req_body=$(jq -n \
 #            --arg msg "$mainrepo_prs" \
